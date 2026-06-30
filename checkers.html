@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkers</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #1a1a2e;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #e0e0e0;
+      padding: 1rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin-bottom: 1rem;
+      color: #e2b96f;
+    }
+
+    .mode-toggle {
+      display: flex;
+      background: #0f3460;
+      border-radius: 10px;
+      padding: 4px;
+      gap: 4px;
+      margin-bottom: 1rem;
+    }
+    .mode-btn {
+      padding: 7px 22px;
+      border: none;
+      border-radius: 7px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: transparent;
+      color: #888;
+      transition: background 0.15s, color 0.15s;
+    }
+    .mode-btn.active { background: #e2b96f; color: #1a1a2e; }
+
+    .info-bar {
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+      margin-bottom: 0.8rem;
+    }
+    .player-card {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 16px;
+      border-radius: 10px;
+      background: #16213e;
+      font-weight: 600;
+      font-size: 0.9rem;
+      border: 2px solid transparent;
+      transition: border-color 0.2s;
+    }
+    .player-card.active { border-color: #e2b96f; }
+    .dot {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot.r { background: radial-gradient(circle at 35% 35%, #ff8888, #bb1111); border: 2px solid #880000; }
+    .dot.b { background: radial-gradient(circle at 35% 35%, #666, #1a1a1a); border: 2px solid #000; }
+    .vs-sep { color: #444; font-size: 0.85rem; }
+
+    .status {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.8rem;
+      height: 1.3em;
+      text-align: center;
+      color: #ccc;
+    }
+    .status span { color: #e2b96f; }
+
+    .board-wrap {
+      position: relative;
+      border: 4px solid #333;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    }
+
+    #board {
+      display: grid;
+      grid-template-columns: repeat(8, 62px);
+      grid-template-rows: repeat(8, 62px);
+    }
+
+    .sq {
+      width: 62px; height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .sq.lt { background: #f0d9b5; }
+    .sq.dk { background: #769656; }
+    .sq.dk.last { background: #bbcc44; }
+    .sq.dk.dest { background: #5a8a34; cursor: pointer; }
+    .sq.dk.dest:hover { background: #6aaa3e; }
+
+    .piece {
+      width: 50px; height: 50px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: absolute;
+      transition: transform 0.1s, box-shadow 0.1s;
+      user-select: none;
+    }
+    .piece.r {
+      background: radial-gradient(circle at 36% 34%, #ff9999, #cc1111);
+      border: 3px solid #880000;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.45), inset 0 1px 3px rgba(255,255,255,0.3);
+    }
+    .piece.b {
+      background: radial-gradient(circle at 36% 34%, #777, #1a1a1a);
+      border: 3px solid #000;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.55), inset 0 1px 3px rgba(255,255,255,0.12);
+    }
+    .piece.movable { cursor: pointer; }
+    .piece.movable:hover { transform: scale(1.06); }
+    .piece.sel {
+      transform: scale(1.12);
+      box-shadow: 0 0 0 3px #ffd700, 0 4px 14px rgba(0,0,0,0.5);
+    }
+    .piece .crown {
+      font-size: 1.15rem;
+      line-height: 1;
+      filter: drop-shadow(0 1px 1px rgba(0,0,0,0.9));
+      color: #ffd700;
+    }
+
+    .hint {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: rgba(255,215,0,0.4);
+      border: 2px solid rgba(255,215,0,0.75);
+      pointer-events: none;
+    }
+
+    .overlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.3);
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #e2b96f;
+      letter-spacing: 1px;
+    }
+    .overlay.show { display: flex; }
+
+    .controls { margin-top: 1rem; }
+    .ctrl-btn {
+      padding: 10px 32px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: #e2b96f;
+      color: #1a1a2e;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .ctrl-btn:hover { background: #f0cc88; }
+    .ctrl-btn:active { transform: scale(0.97); }
+  </style>
+</head>
+<body>
+
+<h1>Checkers</h1>
+
+<div class="mode-toggle">
+  <button class="mode-btn active" id="btn-pvp">2 Players</button>
+  <button class="mode-btn" id="btn-pvc">vs Computer</button>
+</div>
+
+<div class="info-bar">
+  <div class="player-card active" id="card-r">
+    <div class="dot r"></div>
+    <span id="lbl-r">Red</span>
+    <strong id="cnt-r">12</strong>
+  </div>
+  <span class="vs-sep">vs</span>
+  <div class="player-card" id="card-b">
+    <div class="dot b"></div>
+    <span id="lbl-b">Black</span>
+    <strong id="cnt-b">12</strong>
+  </div>
+</div>
+
+<div class="status" id="status"></div>
+
+<div class="board-wrap">
+  <div id="board"></div>
+  <div class="overlay" id="overlay">Thinking…</div>
+</div>
+
+<div class="controls">
+  <button class="ctrl-btn" id="btn-new">New Game</button>
+</div>
+
+<script>
+'use strict';
+
+// ── Board primitives ──────────────────────────────────────────────────────────
+const inB  = (r,c) => r>=0&&r<8&&c>=0&&c<8;
+const side = p => p ? p.toLowerCase() : null;
+const opp  = p => p==='r'?'b':'r';
+const isK  = p => p==='R'||p==='B';
+const cp   = b => b.map(r=>[...r]);
+
+function dirs(p) {
+  if (p==='r') return [[-1,-1],[-1,1]];
+  if (p==='b') return [[1,-1],[1,1]];
+  return [[-1,-1],[-1,1],[1,-1],[1,1]];
+}
+function promo(b,r,c) {
+  if (b[r][c]==='r'&&r===0) b[r][c]='R';
+  if (b[r][c]==='b'&&r===7) b[r][c]='B';
+}
+
+// ── Move generation ───────────────────────────────────────────────────────────
+function jumps(b, r, c, player, used) {
+  const piece=b[r][c], out=[];
+  for (const [dr,dc] of dirs(piece)) {
+    const mr=r+dr,mc=c+dc,nr=r+2*dr,nc=c+2*dc;
+    if (!inB(nr,nc)) continue;
+    const mid=b[mr][mc];
+    if (!mid||side(mid)===player) continue;
+    if (b[nr][nc]!==null) continue;
+    if (used.some(([ur,uc])=>ur===mr&&uc===mc)) continue;
+    const nb=cp(b);
+    nb[nr][nc]=nb[r][c]; nb[r][c]=null; nb[mr][mc]=null;
+    const wasK=isK(nb[nr][nc]);
+    promo(nb,nr,nc);
+    const promoted=!wasK&&isK(nb[nr][nc]);
+    const used2=[...used,[mr,mc]];
+    const cont=promoted?[]:jumps(nb,nr,nc,player,used2);
+    if (!cont.length) out.push({to:[nr,nc],caps:used2,board:nb});
+    else out.push(...cont);
+  }
+  return out;
+}
+
+function getMoves(b, player) {
+  const J=[],S=[];
+  for (let r=0;r<8;r++) for (let c=0;c<8;c++) {
+    if (side(b[r][c])!==player) continue;
+    jumps(b,r,c,player,[]).forEach(j=>J.push({from:[r,c],...j}));
+    for (const [dr,dc] of dirs(b[r][c])) {
+      const nr=r+dr,nc=c+dc;
+      if (!inB(nr,nc)||b[nr][nc]) continue;
+      const nb=cp(b); nb[nr][nc]=nb[r][c]; nb[r][c]=null; promo(nb,nr,nc);
+      S.push({from:[r,c],to:[nr,nc],caps:[],board:nb});
+    }
+  }
+  return J.length?J:S;
+}
+
+// ── AI ────────────────────────────────────────────────────────────────────────
+function evalB(b) {
+  let s=0;
+  for (let r=0;r<8;r++) for (let c=0;c<8;c++) {
+    const p=b[r][c]; if(!p) continue;
+    let v=isK(p)?3.2:1;
+    if (!isK(p)) v += (side(p)==='b'?r:(7-r))*0.05;
+    v += (3.5-Math.abs(3.5-c))*0.03;
+    s += side(p)==='b'?v:-v;
+  }
+  return s;
+}
+
+function mmx(b,depth,alpha,beta,player) {
+  const mv=getMoves(b,player);
+  if (!mv.length) return player==='b'?-300:300;
+  if (!depth) return evalB(b);
+  const nxt=opp(player);
+  if (player==='b') {
+    let best=-Infinity;
+    for (const m of mv) {
+      best=Math.max(best,mmx(m.board,depth-1,alpha,beta,nxt));
+      alpha=Math.max(alpha,best);
+      if (beta<=alpha) break;
+    }
+    return best;
+  } else {
+    let best=Infinity;
+    for (const m of mv) {
+      best=Math.min(best,mmx(m.board,depth-1,alpha,beta,nxt));
+      beta=Math.min(beta,best);
+      if (beta<=alpha) break;
+    }
+    return best;
+  }
+}
+
+function aiPick(b, player, depth=5) {
+  const mv=getMoves(b,player);
+  if (!mv.length) return null;
+  const max=player==='b';
+  let bs=max?-Infinity:Infinity, best=mv[0];
+  for (const m of mv) {
+    const s=mmx(m.board,depth-1,-Infinity,Infinity,opp(player));
+    if (max?s>bs:s<bs) { bs=s; best=m; }
+  }
+  return best;
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let board, turn, sel, selMoves, allMv, lastMove, vsComp, over, thinking;
+
+function count(p) { let n=0; for(let r=0;r<8;r++)for(let c=0;c<8;c++)if(side(board[r][c])===p)n++; return n; }
+
+function pname(p) { return vsComp?(p==='r'?'You (Red)':'Computer'):(p==='r'?'Red':'Black'); }
+function setStatus(h) { document.getElementById('status').innerHTML=h; }
+
+function updateInfo() {
+  document.getElementById('cnt-r').textContent=count('r');
+  document.getElementById('cnt-b').textContent=count('b');
+  document.getElementById('card-r').classList.toggle('active',!over&&turn==='r');
+  document.getElementById('card-b').classList.toggle('active',!over&&turn==='b');
+}
+
+function newGame() {
+  board=mkBoard(); turn='r'; sel=null; selMoves=[]; lastMove=null; over=false; thinking=false;
+  allMv=getMoves(board,'r');
+  document.getElementById('overlay').classList.remove('show');
+  updateInfo();
+  render();
+  setStatus(`<span>${pname('r')}</span>'s turn`);
+}
+
+function mkBoard() {
+  const b=Array.from({length:8},()=>Array(8).fill(null));
+  for(let r=0;r<3;r++)for(let c=0;c<8;c++)if((r+c)%2===1)b[r][c]='b';
+  for(let r=5;r<8;r++)for(let c=0;c<8;c++)if((r+c)%2===1)b[r][c]='r';
+  return b;
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render() {
+  const el=document.getElementById('board');
+  el.innerHTML='';
+  const dests=selMoves.map(m=>m.to);
+
+  for (let r=0;r<8;r++) for (let c=0;c<8;c++) {
+    const dark=(r+c)%2===1;
+    const sq=document.createElement('div');
+    sq.className='sq '+(dark?'dk':'lt');
+
+    const isDest=dests.some(([dr,dc])=>dr===r&&dc===c);
+    const isLast=lastMove&&(
+      (lastMove.from[0]===r&&lastMove.from[1]===c)||
+      (lastMove.to[0]===r&&lastMove.to[1]===c)
+    );
+
+    if (dark&&isLast) sq.classList.add('last');
+    if (dark&&isDest) sq.classList.add('dest');
+
+    const val=board[r][c];
+    const isSel=sel&&sel[0]===r&&sel[1]===c;
+
+    if (val) {
+      const p=document.createElement('div');
+      const s=side(val);
+      p.className='piece '+s+(isSel?' sel':'');
+      if (isK(val)) { const cr=document.createElement('span'); cr.className='crown'; cr.textContent='♛'; p.appendChild(cr); }
+
+      const canSelect=!over&&!thinking&&s===turn&&!(vsComp&&turn==='b');
+      const pm=canSelect?allMv.filter(m=>m.from[0]===r&&m.from[1]===c):[];
+      if (pm.length) {
+        p.classList.add('movable');
+        p.addEventListener('click',e=>{ e.stopPropagation(); pick(r,c,pm); });
+      }
+      sq.appendChild(p);
+    }
+
+    if (dark&&isDest) {
+      if (!val) { const h=document.createElement('div'); h.className='hint'; sq.appendChild(h); }
+      sq.addEventListener('click',()=>execDest(r,c));
+    } else if (dark&&!val&&sel) {
+      sq.addEventListener('click',()=>{ sel=null; selMoves=[]; render(); });
+    }
+
+    el.appendChild(sq);
+  }
+}
+
+function pick(r,c,pm) {
+  if (sel&&sel[0]===r&&sel[1]===c) { sel=null; selMoves=[]; }
+  else { sel=[r,c]; selMoves=pm; }
+  render();
+}
+
+function execDest(r,c) {
+  const mv=selMoves.find(m=>m.to[0]===r&&m.to[1]===c);
+  if (mv) exec(mv);
+}
+
+function exec(mv) {
+  board=mv.board; lastMove=mv; sel=null; selMoves=[];
+  const next=opp(turn);
+  const nxt=getMoves(board,next);
+  updateInfo();
+
+  if (!nxt.length) {
+    over=true; updateInfo();
+    setStatus(`<span>${pname(turn)}</span> wins!`);
+    render(); return;
+  }
+
+  turn=next; allMv=nxt;
+  render();
+
+  if (vsComp&&turn==='b') {
+    thinking=true;
+    setStatus(`<span>Computer</span> is thinking…`);
+    document.getElementById('overlay').classList.add('show');
+    setTimeout(()=>{
+      const m=aiPick(board,'b');
+      document.getElementById('overlay').classList.remove('show');
+      thinking=false;
+      if (m) exec(m);
+    }, 250);
+    return;
+  }
+
+  setStatus(`<span>${pname(turn)}</span>'s turn`);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+function setMode(comp) {
+  vsComp=comp;
+  document.getElementById('btn-pvp').classList.toggle('active',!comp);
+  document.getElementById('btn-pvc').classList.toggle('active',comp);
+  document.getElementById('lbl-r').textContent=comp?'You':'Red';
+  document.getElementById('lbl-b').textContent=comp?'CPU':'Black';
+  newGame();
+}
+
+document.getElementById('btn-pvp').addEventListener('click',()=>setMode(false));
+document.getElementById('btn-pvc').addEventListener('click',()=>setMode(true));
+document.getElementById('btn-new').addEventListener('click',newGame);
+
+vsComp=false;
+newGame();
+</script>
+</body>
+</html>

@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>15 Puzzle</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #1a1a2e;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #e0e0e0;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin-bottom: 1.5rem;
+      color: #e2b96f;
+    }
+
+    .stats {
+      display: flex;
+      gap: 2rem;
+      margin-bottom: 1.2rem;
+      font-size: 1rem;
+    }
+
+    .stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #888;
+    }
+
+    .stat-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #e2b96f;
+      min-width: 4ch;
+      text-align: center;
+    }
+
+    .board-wrapper {
+      background: #16213e;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    }
+
+    #board {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      width: 340px;
+      height: 340px;
+    }
+
+    .tile {
+      background: #0f3460;
+      border: 2px solid #1a4a8a;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #e0e0e0;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.1s, transform 0.1s, box-shadow 0.1s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+
+    .tile:hover:not(.empty) {
+      background: #1a4a8a;
+      transform: scale(1.04);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+
+    .tile:active:not(.empty) {
+      transform: scale(0.97);
+    }
+
+    .tile.empty {
+      background: #0d1b33;
+      border-color: #0d1b33;
+      box-shadow: none;
+      cursor: default;
+    }
+
+    .tile.slide {
+      animation: slide 0.1s ease;
+    }
+
+    @keyframes slide {
+      from { transform: scale(0.95); }
+      to   { transform: scale(1); }
+    }
+
+    .tile.won {
+      background: #1a5c3a;
+      border-color: #2a8a56;
+      color: #7fffb2;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 1.2rem;
+    }
+
+    button {
+      padding: 10px 28px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    #btn-shuffle {
+      background: #e2b96f;
+      color: #1a1a2e;
+    }
+
+    #btn-shuffle:hover { background: #f0cc88; }
+    #btn-shuffle:active { transform: scale(0.97); }
+
+    #btn-solve {
+      background: #0f3460;
+      color: #e0e0e0;
+      border: 2px solid #1a4a8a;
+    }
+
+    #btn-solve:hover { background: #1a4a8a; }
+    #btn-solve:active { transform: scale(0.97); }
+
+    #win-banner {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    #win-banner.show {
+      display: flex;
+    }
+
+    .win-box {
+      background: #16213e;
+      border-radius: 20px;
+      padding: 2.5rem 3rem;
+      text-align: center;
+      box-shadow: 0 10px 60px rgba(0,0,0,0.6);
+      animation: pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes pop {
+      from { transform: scale(0.7); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+
+    .win-box h2 {
+      font-size: 2rem;
+      color: #e2b96f;
+      margin-bottom: 0.5rem;
+    }
+
+    .win-box p {
+      color: #aaa;
+      margin-bottom: 1.5rem;
+    }
+
+    .win-box button {
+      background: #e2b96f;
+      color: #1a1a2e;
+      padding: 12px 36px;
+      font-size: 1rem;
+    }
+
+    .win-box button:hover { background: #f0cc88; }
+  </style>
+</head>
+<body>
+
+<h1>15 Puzzle</h1>
+
+<div class="stats">
+  <div class="stat">
+    <span class="stat-label">Moves</span>
+    <span class="stat-value" id="moves">0</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Time</span>
+    <span class="stat-value" id="timer">0:00</span>
+  </div>
+</div>
+
+<div class="board-wrapper">
+  <div id="board"></div>
+</div>
+
+<div class="controls">
+  <button id="btn-shuffle">Shuffle</button>
+  <button id="btn-solve">Reset</button>
+</div>
+
+<div id="win-banner">
+  <div class="win-box">
+    <h2>Puzzle Solved!</h2>
+    <p id="win-msg"></p>
+    <button id="btn-play-again">Play Again</button>
+  </div>
+</div>
+
+<script>
+  const SIZE = 4;
+  const TOTAL = SIZE * SIZE;
+
+  let tiles = [];
+  let moves = 0;
+  let seconds = 0;
+  let timerInterval = null;
+  let started = false;
+  let won = false;
+
+  const boardEl = document.getElementById('board');
+  const movesEl = document.getElementById('moves');
+  const timerEl = document.getElementById('timer');
+  const winBanner = document.getElementById('win-banner');
+  const winMsg = document.getElementById('win-msg');
+
+  function solved() {
+    return tiles.every((v, i) => v === (i === TOTAL - 1 ? 0 : i + 1));
+  }
+
+  function isSolvable(arr) {
+    let inversions = 0;
+    const flat = arr.filter(v => v !== 0);
+    for (let i = 0; i < flat.length; i++)
+      for (let j = i + 1; j < flat.length; j++)
+        if (flat[i] > flat[j]) inversions++;
+    const blankRow = Math.floor(arr.indexOf(0) / SIZE);
+    const fromBottom = SIZE - blankRow;
+    if (SIZE % 2 === 1) return inversions % 2 === 0;
+    if (fromBottom % 2 === 0) return inversions % 2 === 1;
+    return inversions % 2 === 0;
+  }
+
+  function shuffle() {
+    stopTimer();
+    started = false;
+    won = false;
+    moves = 0;
+    seconds = 0;
+    movesEl.textContent = '0';
+    timerEl.textContent = '0:00';
+    winBanner.classList.remove('show');
+
+    do {
+      tiles = Array.from({length: TOTAL}, (_, i) => i === TOTAL - 1 ? 0 : i + 1);
+      for (let i = TOTAL - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+      }
+    } while (!isSolvable(tiles) || solved());
+
+    render();
+  }
+
+  function reset() {
+    stopTimer();
+    started = false;
+    won = false;
+    moves = 0;
+    seconds = 0;
+    movesEl.textContent = '0';
+    timerEl.textContent = '0:00';
+    winBanner.classList.remove('show');
+    tiles = Array.from({length: TOTAL}, (_, i) => i === TOTAL - 1 ? 0 : i + 1);
+    render();
+  }
+
+  function render(slidedIndex = -1) {
+    boardEl.innerHTML = '';
+    const isWon = solved();
+
+    tiles.forEach((val, idx) => {
+      const el = document.createElement('div');
+      el.className = 'tile' + (val === 0 ? ' empty' : '') + (isWon && val !== 0 ? ' won' : '');
+      if (val !== 0) el.textContent = val;
+      if (idx === slidedIndex) el.classList.add('slide');
+      if (val !== 0) el.addEventListener('click', () => tryMove(idx));
+      boardEl.appendChild(el);
+    });
+
+    if (isWon && !won) {
+      won = true;
+      stopTimer();
+      const m = moves;
+      const s = seconds;
+      const mm = Math.floor(s / 60);
+      const ss = s % 60;
+      winMsg.textContent = `${m} move${m !== 1 ? 's' : ''} in ${mm}:${String(ss).padStart(2,'0')}`;
+      setTimeout(() => winBanner.classList.add('show'), 300);
+    }
+  }
+
+  function tryMove(idx) {
+    if (won) return;
+    const blank = tiles.indexOf(0);
+    const row = Math.floor(idx / SIZE), col = idx % SIZE;
+    const bRow = Math.floor(blank / SIZE), bCol = blank % SIZE;
+    const adjacent = (row === bRow && Math.abs(col - bCol) === 1) ||
+                     (col === bCol && Math.abs(row - bRow) === 1);
+    if (!adjacent) return;
+
+    if (!started) { started = true; startTimer(); }
+
+    [tiles[idx], tiles[blank]] = [tiles[blank], tiles[idx]];
+    moves++;
+    movesEl.textContent = moves;
+    render(blank);
+  }
+
+  function startTimer() {
+    timerInterval = setInterval(() => {
+      seconds++;
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      timerEl.textContent = `${m}:${String(s).padStart(2,'0')}`;
+    }, 1000);
+  }
+
+  function stopTimer() {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+
+  document.getElementById('btn-shuffle').addEventListener('click', shuffle);
+  document.getElementById('btn-solve').addEventListener('click', reset);
+  document.getElementById('btn-play-again').addEventListener('click', shuffle);
+
+  document.addEventListener('keydown', e => {
+    const blank = tiles.indexOf(0);
+    const bRow = Math.floor(blank / SIZE), bCol = blank % SIZE;
+    let target = -1;
+    if (e.key === 'ArrowUp'    && bRow < SIZE - 1) target = blank + SIZE;
+    if (e.key === 'ArrowDown'  && bRow > 0)        target = blank - SIZE;
+    if (e.key === 'ArrowLeft'  && bCol < SIZE - 1) target = blank + 1;
+    if (e.key === 'ArrowRight' && bCol > 0)        target = blank - 1;
+    if (target !== -1) { e.preventDefault(); tryMove(target); }
+  });
+
+  reset();
+</script>
+</body>
+</html>

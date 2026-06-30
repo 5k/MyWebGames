@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyWebGames</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #1a1a2e;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #e0e0e0;
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      padding: 3.5rem 1rem 2rem;
+    }
+    header h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: 3px;
+      color: #e2b96f;
+    }
+    header p {
+      margin-top: 0.6rem;
+      color: #888;
+      font-size: 1rem;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Game Grid ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 1.5rem 4rem;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: #16213e;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 6px 30px rgba(0,0,0,0.45);
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+    }
+
+    /* ── Preview Area ── */
+    .preview {
+      height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    /* 15 Puzzle preview */
+    .preview-puzzle { background: #0d1f3c; }
+    .puzzle-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 38px);
+      grid-template-rows: repeat(4, 38px);
+      gap: 5px;
+    }
+    .puzzle-tile {
+      background: #0f3460;
+      border: 2px solid #1a4a8a;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #e0e0e0;
+    }
+    .puzzle-tile.empty { background: #0a1628; border-color: #0a1628; }
+    .puzzle-tile.gold { background: #1a4a8a; color: #e2b96f; }
+
+    /* Tic Tac Toe preview */
+    .preview-ttt { background: #0d1f3c; }
+    .ttt-board {
+      display: grid;
+      grid-template-columns: repeat(3, 52px);
+      grid-template-rows: repeat(3, 52px);
+      gap: 5px;
+    }
+    .ttt-cell {
+      background: #0f3460;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      font-weight: 800;
+    }
+    .ttt-cell.x { color: #6eb5ff; }
+    .ttt-cell.o { color: #ff8c69; }
+
+    /* Checkers preview */
+    .preview-checkers { background: #1a2a1a; }
+    .checker-board {
+      display: grid;
+      grid-template-columns: repeat(6, 27px);
+      grid-template-rows: repeat(6, 27px);
+      border: 2px solid #333;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .cb { width: 27px; height: 27px; display: flex; align-items: center; justify-content: center; }
+    .cb.lt { background: #f0d9b5; }
+    .cb.dk { background: #769656; }
+    .cb-piece {
+      width: 19px; height: 19px;
+      border-radius: 50%;
+    }
+    .cb-piece.r { background: radial-gradient(circle at 35% 35%, #ff9999, #cc1111); border: 2px solid #880000; }
+    .cb-piece.b { background: radial-gradient(circle at 35% 35%, #777, #1a1a1a); border: 2px solid #000; }
+
+    /* Backgammon preview */
+    .preview-bg { background: #0d2a1a; }
+    .bg-board {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .bg-row {
+      display: flex;
+      gap: 3px;
+    }
+    .bg-tri {
+      width: 0; height: 0;
+    }
+    .bg-tri.down {
+      border-left: 13px solid transparent;
+      border-right: 13px solid transparent;
+      border-top: 52px solid;
+    }
+    .bg-tri.up {
+      border-left: 13px solid transparent;
+      border-right: 13px solid transparent;
+      border-bottom: 52px solid;
+    }
+    .bg-tri.red  { border-top-color: #b83232;  }
+    .bg-tri.red.up  { border-top-color: transparent; border-bottom-color: #b83232; }
+    .bg-tri.tan  { border-top-color: #d4b896; }
+    .bg-tri.tan.up  { border-top-color: transparent; border-bottom-color: #d4b896; }
+    .bg-checker {
+      width: 20px; height: 20px; border-radius: 50%;
+      position: absolute;
+    }
+    .bg-preview-inner { position: relative; }
+
+    /* ── Card Body ── */
+    .card-body {
+      padding: 1.3rem 1.4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      flex: 1;
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #e2b96f;
+      letter-spacing: 0.5px;
+    }
+
+    .card-desc {
+      font-size: 0.88rem;
+      color: #999;
+      line-height: 1.5;
+    }
+
+    /* ── How to Play accordion ── */
+    .htp-toggle {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #6eb5ff;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: color 0.15s;
+    }
+    .htp-toggle:hover { color: #a0d0ff; }
+    .htp-toggle .arrow {
+      display: inline-block;
+      transition: transform 0.2s;
+      font-style: normal;
+      font-size: 0.75rem;
+    }
+    .htp-toggle.open .arrow { transform: rotate(90deg); }
+
+    .htp-content {
+      display: none;
+      padding: 0.8rem;
+      background: #0f2040;
+      border-radius: 8px;
+      border-left: 3px solid #e2b96f;
+    }
+    .htp-content.open { display: block; }
+
+    .htp-content ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+    .htp-content li {
+      font-size: 0.84rem;
+      color: #bbb;
+      line-height: 1.45;
+      padding-left: 1.1em;
+      position: relative;
+    }
+    .htp-content li::before {
+      content: '›';
+      position: absolute;
+      left: 0;
+      color: #e2b96f;
+      font-weight: 700;
+    }
+    .htp-content .key {
+      display: inline-block;
+      background: #1a4a8a;
+      color: #e0e0e0;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 0.78rem;
+      font-family: monospace;
+      border: 1px solid #2a6aaa;
+    }
+
+    /* ── Play Button ── */
+    .play-btn {
+      display: block;
+      text-align: center;
+      padding: 11px;
+      background: #e2b96f;
+      color: #1a1a2e;
+      font-weight: 700;
+      font-size: 0.95rem;
+      border-radius: 9px;
+      text-decoration: none;
+      letter-spacing: 0.5px;
+      transition: background 0.15s, transform 0.1s;
+      margin-top: auto;
+    }
+    .play-btn:hover { background: #f0cc88; transform: scale(1.02); }
+    .play-btn:active { transform: scale(0.98); }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: #444;
+      font-size: 0.82rem;
+      border-top: 1px solid #0f2040;
+    }
+    footer a { color: #6eb5ff; text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>MyWebGames</h1>
+  <p>Classic games — no install, no sign-up, just play</p>
+</header>
+
+<main class="grid">
+
+  <!-- 15 Puzzle -->
+  <div class="card">
+    <div class="preview preview-puzzle">
+      <div class="puzzle-grid">
+        <div class="puzzle-tile">1</div>
+        <div class="puzzle-tile">2</div>
+        <div class="puzzle-tile">3</div>
+        <div class="puzzle-tile gold">4</div>
+        <div class="puzzle-tile">5</div>
+        <div class="puzzle-tile gold">6</div>
+        <div class="puzzle-tile">7</div>
+        <div class="puzzle-tile">8</div>
+        <div class="puzzle-tile">9</div>
+        <div class="puzzle-tile">10</div>
+        <div class="puzzle-tile gold">11</div>
+        <div class="puzzle-tile">12</div>
+        <div class="puzzle-tile">13</div>
+        <div class="puzzle-tile">14</div>
+        <div class="puzzle-tile">15</div>
+        <div class="puzzle-tile empty"></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="card-title">15 Puzzle</div>
+      <div class="card-desc">Slide numbered tiles into order on a 4×4 grid. One space is empty — can you solve it?</div>
+
+      <button class="htp-toggle" onclick="toggleHtp(this)">
+        <i class="arrow">›</i> How to Play
+      </button>
+      <div class="htp-content">
+        <ul>
+          <li>Click any tile next to the empty space to slide it in.</li>
+          <li>Use <span class="key">↑ ↓ ← →</span> arrow keys as an alternative.</li>
+          <li>Arrange tiles <strong>1 – 15</strong> in order, left to right, top to bottom.</li>
+          <li>Hit <strong>Shuffle</strong> to scramble the board and start a new game.</li>
+          <li><strong>Reset</strong> returns the board to the solved state for practice.</li>
+          <li>The timer and move counter start on your first move.</li>
+        </ul>
+      </div>
+
+      <a class="play-btn" href="15puzzle.html">Play Now</a>
+    </div>
+  </div>
+
+  <!-- Tic Tac Toe -->
+  <div class="card">
+    <div class="preview preview-ttt">
+      <div class="ttt-board">
+        <div class="ttt-cell x">X</div>
+        <div class="ttt-cell"></div>
+        <div class="ttt-cell o">O</div>
+        <div class="ttt-cell"></div>
+        <div class="ttt-cell x">X</div>
+        <div class="ttt-cell"></div>
+        <div class="ttt-cell o">O</div>
+        <div class="ttt-cell"></div>
+        <div class="ttt-cell x">X</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="card-title">Tic Tac Toe</div>
+      <div class="card-desc">The timeless 3-in-a-row classic. Play a friend or test yourself against an unbeatable AI.</div>
+
+      <button class="htp-toggle" onclick="toggleHtp(this)">
+        <i class="arrow">›</i> How to Play
+      </button>
+      <div class="htp-content">
+        <ul>
+          <li>Players take turns: <strong style="color:#6eb5ff">X</strong> always goes first.</li>
+          <li>Click any empty square to place your mark.</li>
+          <li>Get <strong>3 in a row</strong> — horizontally, vertically, or diagonally — to win.</li>
+          <li>In <strong>vs Computer</strong> mode, the AI never loses; best you can get is a draw.</li>
+          <li><strong>New Game</strong> clears the board; <strong>Reset Scores</strong> wipes the tally.</li>
+        </ul>
+      </div>
+
+      <a class="play-btn" href="tictactoe.html">Play Now</a>
+    </div>
+  </div>
+
+  <!-- Checkers -->
+  <div class="card">
+    <div class="preview preview-checkers">
+      <div class="checker-board">
+        <!-- Row 0 -->
+        <div class="cb lt"></div><div class="cb dk"><div class="cb-piece b"></div></div>
+        <div class="cb lt"></div><div class="cb dk"><div class="cb-piece b"></div></div>
+        <div class="cb lt"></div><div class="cb dk"><div class="cb-piece b"></div></div>
+        <!-- Row 1 -->
+        <div class="cb dk"><div class="cb-piece b"></div></div><div class="cb lt"></div>
+        <div class="cb dk"><div class="cb-piece b"></div></div><div class="cb lt"></div>
+        <div class="cb dk"></div><div class="cb lt"></div>
+        <!-- Row 2 -->
+        <div class="cb lt"></div><div class="cb dk"></div>
+        <div class="cb lt"></div><div class="cb dk"></div>
+        <div class="cb lt"></div><div class="cb dk"></div>
+        <!-- Row 3 -->
+        <div class="cb dk"></div><div class="cb lt"></div>
+        <div class="cb dk"></div><div class="cb lt"></div>
+        <div class="cb dk"></div><div class="cb lt"></div>
+        <!-- Row 4 -->
+        <div class="cb lt"></div><div class="cb dk"><div class="cb-piece r"></div></div>
+        <div class="cb lt"></div><div class="cb dk"><div class="cb-piece r"></div></div>
+        <div class="cb lt"></div><div class="cb dk"><div class="cb-piece r"></div></div>
+        <!-- Row 5 -->
+        <div class="cb dk"><div class="cb-piece r"></div></div><div class="cb lt"></div>
+        <div class="cb dk"><div class="cb-piece r"></div></div><div class="cb lt"></div>
+        <div class="cb dk"><div class="cb-piece r"></div></div><div class="cb lt"></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="card-title">Checkers</div>
+      <div class="card-desc">American Checkers on an 8×8 board. Jump your opponent's pieces and king your men to win.</div>
+
+      <button class="htp-toggle" onclick="toggleHtp(this)">
+        <i class="arrow">›</i> How to Play
+      </button>
+      <div class="htp-content">
+        <ul>
+          <li>Click a piece to select it — gold dots mark where it can move.</li>
+          <li>Click a destination to move, or click a different piece to re-select.</li>
+          <li><strong>Captures are forced:</strong> if you can jump, you must.</li>
+          <li>Chain multiple jumps in one turn when possible.</li>
+          <li>Reach the far side to become a <strong>King (♛)</strong>, which can move in any diagonal direction.</li>
+          <li>Win by leaving your opponent with no legal moves.</li>
+          <li>In <strong>vs Computer</strong> mode the AI plays Black with minimax + alpha-beta pruning.</li>
+        </ul>
+      </div>
+
+      <a class="play-btn" href="checkers.html">Play Now</a>
+    </div>
+  </div>
+
+  <!-- Backgammon -->
+  <div class="card">
+    <div class="preview preview-bg">
+      <div style="display:flex; gap:6px; align-items:stretch;">
+        <!-- Left half: 6 triangles top + 6 bottom -->
+        <div style="display:flex; flex-direction:column; gap:4px; justify-content:space-between;">
+          <div style="display:flex; gap:3px;">
+            <div class="bg-tri down red"></div>
+            <div class="bg-tri down tan"></div>
+            <div class="bg-tri down red"></div>
+            <div class="bg-tri down tan"></div>
+            <div class="bg-tri down red"></div>
+            <div class="bg-tri down tan"></div>
+          </div>
+          <div style="display:flex; gap:3px;">
+            <div class="bg-tri up tan"></div>
+            <div class="bg-tri up red"></div>
+            <div class="bg-tri up tan"></div>
+            <div class="bg-tri up red"></div>
+            <div class="bg-tri up tan"></div>
+            <div class="bg-tri up red"></div>
+          </div>
+        </div>
+        <!-- Bar -->
+        <div style="width:10px; background:#0f3d24; border-radius:3px; align-self:stretch;"></div>
+        <!-- Right half -->
+        <div style="display:flex; flex-direction:column; gap:4px; justify-content:space-between;">
+          <div style="display:flex; gap:3px;">
+            <div class="bg-tri down red"></div>
+            <div class="bg-tri down tan"></div>
+            <div class="bg-tri down red"></div>
+            <div class="bg-tri down tan"></div>
+            <div class="bg-tri down red"></div>
+            <div class="bg-tri down tan"></div>
+          </div>
+          <div style="display:flex; gap:3px;">
+            <div class="bg-tri up tan"></div>
+            <div class="bg-tri up red"></div>
+            <div class="bg-tri up tan"></div>
+            <div class="bg-tri up red"></div>
+            <div class="bg-tri up tan"></div>
+            <div class="bg-tri up red"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="card-title">Backgammon</div>
+      <div class="card-desc">Race all 15 checkers around the board and bear them off before your opponent does.</div>
+
+      <button class="htp-toggle" onclick="toggleHtp(this)">
+        <i class="arrow">›</i> How to Play
+      </button>
+      <div class="htp-content">
+        <ul>
+          <li>Click anywhere on the board (or <strong>Roll Dice</strong>) to roll at the start of your turn.</li>
+          <li>Click one of your <strong>White</strong> checkers to select it — gold dots show legal destinations.</li>
+          <li>Click a destination to move. Each move consumes one die value.</li>
+          <li>If you have a checker on the <strong>bar</strong>, you must re-enter it before moving any other piece.</li>
+          <li>Land on a lone opponent checker to <strong>hit</strong> it — it goes to the bar.</li>
+          <li>Two or more checkers on a point form a <strong>block</strong> — opponents can't land there.</li>
+          <li>Rolling doubles gives <strong>4 moves</strong> of that value instead of 2.</li>
+          <li>Once all your checkers reach points 1–6, you can start <strong>bearing off</strong> (removing them from the board).</li>
+          <li>First player to bear off all 15 checkers wins.</li>
+        </ul>
+      </div>
+
+      <a class="play-btn" href="backgammon.html">Play Now</a>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <p>Source on <a href="https://github.com/5k/MyWebGames" target="_blank">GitHub</a></p>
+</footer>
+
+<script>
+  function toggleHtp(btn) {
+    btn.classList.toggle('open');
+    const content = btn.nextElementSibling;
+    content.classList.toggle('open');
+  }
+</script>
+
+</body>
+</html>

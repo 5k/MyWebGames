@@ -58,5 +58,26 @@ Standard 8×8 American Checkers.
 - **Branch:** `main`
 - **Policy:** commit and push after every new game or significant change so git history serves as a rollback mechanism
 
+### 4. Backgammon (`backgammon.html`)
+Standard backgammon on a canvas-rendered board.
+
+**Features:**
+- **2 Players** mode or **vs Computer** mode
+- Full standard rules: bar re-entry, forced captures, bearing off, doubles (4 moves)
+- Must-use-maximum-dice rule enforced; higher-die preference when only one die playable
+- 1-ply greedy AI evaluating pip count, blots, primes, home points, anchors — plays Black
+- Click a point/bar to select; valid destinations highlighted with gold dots
+- Dice displayed as tiles below the board; used dice shown at reduced opacity
+- Live pip count for each player
+- "Thinking…" overlay during AI turn
+- Canvas rendering (HTML5 `<canvas>`) for triangular points and checker stacking
+
+---
+
+## Repository
+- **GitHub:** https://github.com/5k/MyWebGames
+- **Branch:** `main`
+- **Policy:** commit and push after every new game or significant change so git history serves as a rollback mechanism
+
 ## Upcoming / Ideas
 _(add future game requests here)_
